@@ -414,7 +414,7 @@ class _UploadScreenState extends State<UploadScreen> {
           const SizedBox(height: 10),
           SizedBox(width: double.infinity, child: OutlinedButton.icon(
             onPressed: () => context.go('/result'),
-            icon: const Icon(Icons.sparkles_rounded, size: 18),
+            icon: const Icon(Icons.auto_awesome_rounded, size: 18),
             label: Text('ເບິ່ງຜົນງານ', style: AppTheme.laoText(size: 14)),
           )).animate(delay: 600.ms).fadeIn(),
         ]),
