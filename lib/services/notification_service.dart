@@ -11,6 +11,7 @@
 //   → ເລືອກ Project → ໄດ້ google-services.json ອັດຕະໂນມັດ
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../services/supabase_service.dart';
@@ -165,7 +166,7 @@ class _NSState extends State<NotificationScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        backgroundColor: PhanuknganColors.navy,
+        backgroundColor: const Color(0xFF0B2545),
         leading: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: const Icon(Icons.arrow_back_rounded, color: Colors.white)),

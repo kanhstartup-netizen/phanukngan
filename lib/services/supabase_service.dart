@@ -125,22 +125,8 @@ class SupabaseService {
 
   /// ດຶງວຽກທັງໝົດ (ຫຼ້າສຸດກ່ອນ)
   Future<List<Job>> getJobs({String? status}) async {
-    var q = supabase.from('jobs').select().order('created_at', ascending: false);
-    if (status != null) q = q.eq('status', status) as dynamic;
-    final data = await q;
-    return (data as List).map((e) => Job.fromMap(e)).toList();
-  }
-
-  /// ສ້າງວຽກໃໝ່
-  Future<Job> createJob({
-    required String title,
-    required String type,
-    String? titleLao,
-    String? command,
-    String? fileUrl,
-    int priority = 3,
-    List<String> platforms = const [],
-    DateTime? deadline,
+    final jobs = await supabase.from("jobs").select().order("created_at", ascending: false);
+    return (jobs as List).map((e) => Job.fromMap(e)).toList();
   }) async {
     final data = await supabase.from('jobs').insert({
       'owner_id':  userId,
