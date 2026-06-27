@@ -378,7 +378,7 @@ class _BeautifulBottomNav extends StatelessWidget {
     final items = [
       (Icons.home_rounded, 'ໜ້າຫຼັກ'),
       (Icons.chat_rounded, 'ສົນທະນາ'),
-      (Icons.sparkles_rounded, 'ຜົນງານ'),
+      (Icons.auto_awesome_rounded, 'ຜົນງານ'),
       (Icons.people_rounded, 'ທີມງານ'),
     ];
     return Container(
