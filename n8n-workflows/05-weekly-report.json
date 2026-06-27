@@ -1,0 +1,71 @@
+{
+  "name": "PHANUKNGAN — Weekly Report ທຸກວັນເສົາ",
+  "nodes": [
+    {
+      "id": "sched-weekly",
+      "name": "ທຸກວັນເສົາ 20:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [200, 300],
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 20 * * 6" }] }
+      }
+    },
+    {
+      "id": "get-stats",
+      "name": "ດຶງສະຖິຕິອາທິດນີ້",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [420, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/stats/weekly"
+      }
+    },
+    {
+      "id": "claude-report",
+      "name": "Claude ຂຽນ Report ລາວ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [640, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}" },
+            { "name": "anthropic-version", "value": "2023-06-01" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 2000, messages: [{ role: 'user', content: `ຂຽນ Weekly Report ພາສາລາວ ສຳລັບ PHANUKNGAN ຈາກຂໍ້ມູນຕໍ່ໄປນີ້:\n\n${JSON.stringify($json)}\n\nໂຄງສ້າງ Report:\n1. ສ'ຄຮ່ວມ (2 ຕ'ນ)\n2. ວຽກທີ່ສ'ເລັດ\n3. ທີມທີ່ເຮັດໄດ້ດີ\n4. ສິ່ງທີ່ຕ້ອງປ'ງ\n5. ແຜນອາທິດໜ'າ\n\nຂຽນລາວ 100% ຖ'ກຕ'ອງ ບໍ'ຜິດໂຕ` }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "notify-report",
+      "name": "ສ'ງ Report ໃຫ້ເຈ'ານາຍ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [860, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "json", "value": "={{ JSON.stringify({ title: '📊 Weekly Report ພ'ອມແລ'ວ', body: $json.content[0].text.substring(0,100) + '...', type: 'weekly_report', full_report: $json.content[0].text }) }}" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "ທຸກວັນເສົາ 20:00":       { "main": [[{ "node": "ດ'ງສະຖິຕິອາທິດນີ'" }]] },
+    "ດ'ງສະຖິຕິອາທິດນີ'":      { "main": [[{ "node": "Claude ຂຽນ Report ລາວ" }]] },
+    "Claude ຂຽນ Report ລາວ":  { "main": [[{ "node": "ສ'ງ Report ໃຫ'ເຈ'ານາຍ" }]] }
+  }
+}

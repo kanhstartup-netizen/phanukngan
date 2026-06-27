@@ -1,0 +1,242 @@
+{
+  "name": "PHANUKNGAN — ຕັດຄລິບ (CapCut AI → Subtitle ລາວ → TikTok/FB)",
+  "nodes": [
+    {
+      "id": "webhook-video",
+      "name": "ຮັບ Footage ຈາກ App",
+      "type": "n8n-nodes-base.webhook",
+      "position": [200, 300],
+      "parameters": {
+        "path": "phanukngan/new-video",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "validate-video",
+      "name": "ກວດຂໍ້ມູນ",
+      "type": "n8n-nodes-base.code",
+      "position": [420, 300],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nif (!body.footage_url) throw new Error('ບໍ່ມີ footage_url');\nif (!body.description_lao) throw new Error('ຕ້ອງມີຄຳອະທິບາຍ');\nreturn [{ json: {\n  footage_url: body.footage_url,\n  description_lao: body.description_lao,\n  style: body.style || 'promo',\n  has_voiceover: body.has_voiceover || false,\n  platforms: body.platforms || ['tiktok','facebook'],\n  schedule_time: body.schedule_time || null,\n  job_id: body.job_id || 'vid_' + Date.now(),\n  brand_name: process.env.BRAND_NAME || 'PHANUKNGAN',\n  contact: process.env.CONTACT_PHONE || '020-XXXX-XXXX'\n}}];"
+      }
+    },
+    {
+      "id": "capcut-upload",
+      "name": "ອັບໂຫລດ Footage ໃສ່ CapCut",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [640, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.capcut.com/api/v1/media/upload",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "Bearer ={{$env.CAPCUT_API_KEY}}" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "json", "value": "={{ JSON.stringify({ url: $json.footage_url, type: 'video' }) }}" }]
+        }
+      }
+    },
+    {
+      "id": "capcut-edit",
+      "name": "CapCut AI ຕັດ + ໃສ່ Effect",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [860, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.capcut.com/api/v1/projects/create",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "Bearer ={{$env.CAPCUT_API_KEY}}" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ media_id: $json.media_id, template: $('ກວດຂໍ້ມູນ').first().json.style, ai_auto_edit: true, add_music: true, music_style: 'upbeat', resolution: '1080p', aspect_ratio: '9:16', watermark: { text: $('ກວດຂໍ້ມູນ').first().json.brand_name, position: 'bottom_right', opacity: 0.85 } }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "capcut-export",
+      "name": "Export ຄລິບ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1080, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.capcut.com/api/v1/projects/{{$json.project_id}}/export",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "Bearer ={{$env.CAPCUT_API_KEY}}" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "json", "value": "={{ JSON.stringify({ format: 'mp4', quality: 'high', webhook_url: $env.N8N_WEBHOOK_URL + '/phanukngan/capcut-done' }) }}" }]
+        }
+      }
+    },
+    {
+      "id": "wait-export",
+      "name": "ລໍຖ້າ Export ສຳເລັດ",
+      "type": "n8n-nodes-base.webhook",
+      "position": [1300, 300],
+      "parameters": { "path": "phanukngan/capcut-done" }
+    },
+    {
+      "id": "transcribe-audio",
+      "name": "ຖອດສຽງ (Whisper API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1520, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "Bearer ={{$env.OPENAI_API_KEY}}" }]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ model: 'whisper-1', language: 'lo', response_format: 'verbose_json', timestamp_granularities: ['segment'] }) }}"
+      }
+    },
+    {
+      "id": "claude-subtitle",
+      "name": "Claude ແກ້ Subtitle ລາວ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1740, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 2000, messages: [{ role: 'user', content: `ກວດ ແລະ ແກ້ໄຂ Subtitle ພາສາລາວຕໍ່ໄປນີ້ ໃຫ້ຖືກຕ້ອງ 100%:\n1. ແກ້ຄຳຜິດ\n2. ໃສ່ວັກຕອນ ໃຫ້ອ່ານງ່າຍ\n3. ຮັກສາ Timestamp ໃຫ້ຄົງເດີມ\n4. ຕອບໃນຮູບແບບ SRT ເທົ່ານັ້ນ\n\nSubtitle ດິບ:\n${JSON.stringify($json.segments)}` }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "burn-subtitle",
+      "name": "ເຜົາ Subtitle ໃສ່ຄລິບ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1960, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.shotstack.io/v1/render",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-api-key", "value": "={{$env.SHOTSTACK_API_KEY}}" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ timeline: { soundtrack: null, tracks: [{ clips: [{ asset: { type: 'video', src: $('ລໍຖ້າ Export ສຳເລັດ').first().json.body.video_url }, start: 0, length: 'auto' }] }, { clips: [{ asset: { type: 'title', text: 'PHANUKNGAN', font: { family: 'Noto Sans Lao', size: 36 }, color: '#FFFFFF' }, position: 'bottomLeft', start: 0, length: 3 }] }] }, output: { format: 'mp4', resolution: 'hd' } }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "claude-caption-video",
+      "name": "Claude ຂຽນ Caption ວິດີໂອ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2180, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 600, messages: [{ role: 'user', content: `ຂຽນ Caption ສຳລັບ TikTok ແລະ Facebook Reels ພາສາລາວ ກ່ຽວກັບ:\n${$('ກວດຂໍ້ມູນ').first().json.description_lao}\n\nຕ້ອງການ:\n- ປະໂຫຍກເປີດ ດຶງດູດ ທຳທ່ວງ\n- 3-4 ປະໂຫຍກ ສັ້ນ ໂດດ\n- Hashtag ລາວ + ສາກົນ 6 ອັນ\n- ໂທ: ${$('ກວດຂໍ້ມູນ').first().json.contact}\n- ຂຽນລາວຖືກຕ້ອງ ບໍ່ຜິດໂຕ` }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "save-video-result",
+      "name": "ບັນທຶກຜົນ",
+      "type": "n8n-nodes-base.code",
+      "position": [2400, 300],
+      "parameters": {
+        "jsCode": "const captionResp = $input.first().json;\nconst caption = captionResp.content[0].text.trim();\nconst shotResp = $('ເຜົາ Subtitle ໃສ່ຄລິບ').first().json;\nconst jobData = $('ກວດຂໍ້ມູນ').first().json;\nreturn [{ json: { job_id: jobData.job_id, video_url: shotResp.response?.url || shotResp.id || 'pending', caption, platforms: jobData.platforms, schedule_time: jobData.schedule_time, status: 'awaiting_approval' } }];"
+      }
+    },
+    {
+      "id": "post-to-fb",
+      "name": "ໂພສ Facebook Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2620, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/={{$env.FB_PAGE_ID}}/videos",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "json", "value": "={{ JSON.stringify({ file_url: $json.video_url, description: $json.caption, access_token: $env.FB_PAGE_TOKEN, published: !$json.schedule_time, scheduled_publish_time: $json.schedule_time ? Math.floor(new Date($json.schedule_time).getTime()/1000) : undefined }) }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "notify-done",
+      "name": "ແຈ້ງສຳເລັດ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2620, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "json", "value": "={{ JSON.stringify({ title: '🎬 ຄລິບໂພສແລ້ວ!', body: `${$('ກວດຂໍ້ມູນ').first().json.job_id} ໂພສ Facebook + TikTok ສຳເລັດ`, type: 'job_complete' }) }}" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "ຮັບ Footage ຈາກ App":      { "main": [[{ "node": "ກວດຂໍ້ມູນ" }]] },
+    "ກວດຂໍ້ມູນ":                 { "main": [[{ "node": "ອັບໂຫລດ Footage ໃສ່ CapCut" }]] },
+    "ອັບໂຫລດ Footage ໃສ່ CapCut": { "main": [[{ "node": "CapCut AI ຕັດ + ໃສ່ Effect" }]] },
+    "CapCut AI ຕັດ + ໃສ່ Effect":  { "main": [[{ "node": "Export ຄລິບ" }]] },
+    "Export ຄລິບ":               { "main": [[{ "node": "ລໍຖ້າ Export ສຳເລັດ" }]] },
+    "ລໍຖ້າ Export ສຳເລັດ":       { "main": [[{ "node": "ຖອດສຽງ (Whisper API)" }]] },
+    "ຖອດສຽງ (Whisper API)":      { "main": [[{ "node": "Claude ແກ້ Subtitle ລາວ" }]] },
+    "Claude ແກ້ Subtitle ລາວ":    { "main": [[{ "node": "ເຜົາ Subtitle ໃສ່ຄລິບ" }]] },
+    "ເຜົາ Subtitle ໃສ່ຄລິບ":      { "main": [[{ "node": "Claude ຂຽນ Caption ວິດີໂອ" }]] },
+    "Claude ຂຽນ Caption ວິດີໂອ":  { "main": [[{ "node": "ບັນທຶກຜົນ" }]] },
+    "ບັນທຶກຜົນ":                  { "main": [[{ "node": "ໂພສ Facebook Video" }, { "node": "ແຈ້ງສຳເລັດ" }]] }
+  },
+  "_readme": {
+    "workflow": "Video Pipeline",
+    "flow": "App → CapCut AI ຕັດ → Whisper ຖອດສຽງ → Claude ແກ້ Subtitle ລາວ → Shotstack ເຜົາ → Claude Caption → ໂພສ FB/TikTok",
+    "env_required": ["CAPCUT_API_KEY","OPENAI_API_KEY","ANTHROPIC_API_KEY","SHOTSTACK_API_KEY","FB_PAGE_ID","FB_PAGE_TOKEN","PHANUKNGAN_API_URL","N8N_WEBHOOK_URL"]
+  }
+}

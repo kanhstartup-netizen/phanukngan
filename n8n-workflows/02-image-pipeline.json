@@ -1,0 +1,213 @@
+{
+  "name": "PHANUKNGAN — ສ້າງຮູບ (Midjourney → Canva → Caption → ໂພສ)",
+  "nodes": [
+    {
+      "id": "webhook-image",
+      "name": "ຮັບຄຳສັ່ງຈາກ App",
+      "type": "n8n-nodes-base.webhook",
+      "position": [200, 300],
+      "parameters": {
+        "path": "phanukngan/new-image",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "validate-input",
+      "name": "ກວດ + ກຽມ Prompt",
+      "type": "n8n-nodes-base.code",
+      "position": [420, 300],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nif (!body.description_lao) throw new Error('ຕ້ອງມີຄຳອະທິບາຍ');\nconst type = body.type || 'product';\nconst styles = {\n  product: 'professional product photo, clean background, high quality, commercial photography',\n  banner: 'marketing banner design, bold typography space, modern design, brand colors',\n  social: 'social media post, lifestyle photography, vibrant colors, engaging composition'\n};\nreturn [{ json: {\n  description_lao: body.description_lao,\n  brand: body.brand || 'PHANUKNGAN',\n  type,\n  platforms: body.platforms || ['facebook', 'tiktok'],\n  schedule_time: body.schedule_time || null,\n  mj_prompt: `${body.description_lao_en || 'product'}, ${styles[type]}, --ar 1:1 --q 2 --style raw`,\n  job_id: body.job_id || 'job_' + Date.now()\n}}];"
+      }
+    },
+    {
+      "id": "claude-translate",
+      "name": "Claude ແປ Prompt ລາວ→ອັງກິດ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [640, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 300, messages: [{ role: 'user', content: `ແປຄຳອະທິບາຍຕໍ່ໄປນີ້ຈາກລາວເປັນອັງກິດ ສຳລັບໃຊ້ເປັນ Midjourney Prompt (ຕອບສະເພາະຄຳແປ ບໍ່ຕ້ອງມີຄຳອະທິບາຍ): ${$json.description_lao}` }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "prep-mj",
+      "name": "ກຽມ Midjourney Prompt",
+      "type": "n8n-nodes-base.code",
+      "position": [860, 300],
+      "parameters": {
+        "jsCode": "const translateResp = $input.first().json;\nconst translated = translateResp.content[0].text.trim();\nconst styles = { product: '--ar 1:1 --q 2', banner: '--ar 16:9 --q 2', social: '--ar 4:5 --q 2' };\nconst prevData = $('ກວດ + ກຽມ Prompt').first().json;\nreturn [{ json: { ...prevData, mj_prompt_final: `${translated}, professional commercial photography, high quality product shot, clean studio background, ${styles[prevData.type] || '--ar 1:1 --q 2'} --style raw` } }];"
+      }
+    },
+    {
+      "id": "midjourney-imagine",
+      "name": "Midjourney สร้างรูป",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1080, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.userapi.ai/midjourney/v2/imagine",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "api-key", "value": "={{$env.MIDJOURNEY_API_KEY}}" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "json", "value": "={{ JSON.stringify({ prompt: $json.mj_prompt_final, webhook_url: $env.N8N_WEBHOOK_URL + '/phanukngan/mj-result', webhook_type: 'result' }) }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wait-mj",
+      "name": "ລໍຖ້າ Midjourney (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "position": [1300, 300],
+      "parameters": {
+        "path": "phanukngan/mj-result",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "download-image",
+      "name": "ດາວໂຫລດຮູບ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1300, 440],
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.body.image_url}}",
+        "responseFormat": "file"
+      }
+    },
+    {
+      "id": "canva-add-text",
+      "name": "Canva ໃສ່ Logo + ຂໍ້ຄວາມລາວ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1520, 370],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.canva.com/rest/v1/designs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer ={{$env.CANVA_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ design_type: 'social_media', title: $('ກວດ + ກຽມ Prompt').first().json.job_id, pages: [{ elements: [ { type: 'image', image_url: $('ລໍຖ້າ Midjourney (Webhook)').first().json.body.image_url }, { type: 'text', text: $env.BRAND_NAME || 'PHANUKNGAN', font_family: 'Noto Sans Lao', font_size: 36, color: '#FFFFFF', position: { x: 20, y: 20 } }, { type: 'text', text: 'Tel: ' + ($env.CONTACT_PHONE || '020-XXXX-XXXX'), font_family: 'Noto Sans Lao', font_size: 24, color: '#FFFFFF', position: { x: 20, y: 980 } } ] }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "claude-caption",
+      "name": "Claude ຂຽນ Caption ລາວ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1740, 370],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 800, messages: [{ role: 'user', content: `ຂຽນ Caption ສຳລັບ Facebook/TikTok ພາສາລາວ ສຳລັບສິນຄ້ານີ້: ${$('ກວດ + ກຽມ Prompt').first().json.description_lao}\n\nກົດໝາຍ:\n- ຂຽນລາວຖືກຕ້ອງ 100% ບໍ່ຜິດໂຕ\n- ມີ Call-to-Action ໃຫ້ຕິດຕໍ່\n- ໃສ່ Hashtag ລາວ + ສາກົນ 5-8 ອັນ\n- ຄວາມຍາວ 3-5 ປະໂຫຍກ\n- ໃສ່ Contact: ${$env.CONTACT_PHONE || '020-XXXX-XXXX'}\n- ໃສ່ຊື່ Page: ${$env.BRAND_NAME || 'PHANUKNGAN'}\n\nຕອບສະເພາະ Caption ເທົ່ານັ້ນ ບໍ່ຕ້ອງ Intro.` }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "parse-caption",
+      "name": "ເກັບ Caption",
+      "type": "n8n-nodes-base.code",
+      "position": [1960, 370],
+      "parameters": {
+        "jsCode": "const captionResp = $input.first().json;\nconst caption = captionResp.content[0].text.trim();\nconst prev = $('ກວດ + ກຽມ Prompt').first().json;\nconst canvaResp = $('Canva ໃສ່ Logo + ຂໍ້ຄວາມລາວ').first().json;\nreturn [{ json: { ...prev, caption, image_url: canvaResp.urls?.view || canvaResp.thumbnail_url || 'pending', canva_design_id: canvaResp.id } }];"
+      }
+    },
+    {
+      "id": "save-result",
+      "name": "ບັນທຶກຜົນໃສ່ Database",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2180, 370],
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/jobs/{{$json.job_id}}/complete",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "json", "value": "={{ JSON.stringify({ status: 'awaiting_approval', image_url: $json.image_url, caption: $json.caption, canva_design_id: $json.canva_design_id, platforms: $json.platforms }) }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "notify-boss",
+      "name": "ແຈ້ງເຈົ້ານາຍ Approve",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2400, 370],
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "json", "value": "={{ JSON.stringify({ title: '🎨 ຮູບພ້ອມ Approve ແລ້ວ!', body: `${$json.job_id} — Caption ລາວ + Watermark ໃສ່ຄົບ. ກົດ Approve ເພື່ອໂພສ`, type: 'approval_required', job_id: $json.job_id }) }}" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "ຮັບຄຳສັ່ງຈາກ App":                  { "main": [[{ "node": "ກວດ + ກຽມ Prompt", "type": "main", "index": 0 }]] },
+    "ກວດ + ກຽມ Prompt":                  { "main": [[{ "node": "Claude ແປ Prompt ລາວ→ອັງກິດ", "type": "main", "index": 0 }]] },
+    "Claude ແປ Prompt ລາວ→ອັງກິດ":       { "main": [[{ "node": "ກຽມ Midjourney Prompt", "type": "main", "index": 0 }]] },
+    "ກຽມ Midjourney Prompt":              { "main": [[{ "node": "Midjourney สร้างรูป", "type": "main", "index": 0 }]] },
+    "Midjourney สร้างรูป":                { "main": [[{ "node": "ລໍຖ້າ Midjourney (Webhook)", "type": "main", "index": 0 }]] },
+    "ລໍຖ້າ Midjourney (Webhook)":         { "main": [[{ "node": "ດາວໂຫລດຮູບ", "type": "main", "index": 0 }]] },
+    "ດາວໂຫລດຮູບ":                        { "main": [[{ "node": "Canva ໃສ່ Logo + ຂໍ້ຄວາມລາວ", "type": "main", "index": 0 }]] },
+    "Canva ໃສ່ Logo + ຂໍ້ຄວາມລາວ":       { "main": [[{ "node": "Claude ຂຽນ Caption ລາວ", "type": "main", "index": 0 }]] },
+    "Claude ຂຽນ Caption ລາວ":             { "main": [[{ "node": "ເກັບ Caption", "type": "main", "index": 0 }]] },
+    "ເກັບ Caption":                       { "main": [[{ "node": "ບັນທຶກຜົນໃສ່ Database", "type": "main", "index": 0 }]] },
+    "ບັນທຶກຜົນໃສ່ Database":              { "main": [[{ "node": "ແຈ້ງເຈົ້ານາຍ Approve", "type": "main", "index": 0 }]] }
+  },
+  "_readme": {
+    "workflow": "Image Pipeline",
+    "flow": "App → Claude ແປ → Midjourney → Canva Watermark → Claude Caption ລາວ → Approve → ໂພສ",
+    "env_required": ["ANTHROPIC_API_KEY","MIDJOURNEY_API_KEY","CANVA_API_KEY","PHANUKNGAN_API_URL","N8N_WEBHOOK_URL","BRAND_NAME","CONTACT_PHONE"]
+  }
+}

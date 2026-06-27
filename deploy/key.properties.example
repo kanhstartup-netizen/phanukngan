@@ -1,0 +1,28 @@
+# ==========================================
+# android/key.properties
+# ==========================================
+# ໃສ່ໄຟລ໌ນີ້ທີ່ android/key.properties
+# ຢ່າ Commit ຂຶ້ນ GitHub!
+
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=phanukngan
+storeFile=../phanukngan-release.jks
+
+# ==========================================
+# ວິທີສ້າງ Keystore (Run ຄັ້ງດຽວ)
+# ==========================================
+# keytool -genkey -v \
+#   -keystore phanukngan-release.jks \
+#   -alias phanukngan \
+#   -keyalg RSA \
+#   -keysize 2048 \
+#   -validity 10000
+#
+# ໃສ່ຂໍ້ມູນ:
+#   First name: PHANUKNGAN
+#   Organization: PHANUKNGAN Co
+#   Country: LA
+#
+# ⚠️ ສ'ຄ phanukngan-release.jks ໄວ້ຢ່າງປອດໄພ!
+# ຖ້າຫາຍ → ຈະ Update App ໃນ Play Store ບໍ່ໄດ້!

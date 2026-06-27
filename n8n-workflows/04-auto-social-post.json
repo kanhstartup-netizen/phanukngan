@@ -1,0 +1,212 @@
+{
+  "name": "PHANUKNGAN — ໂພສ Social Media ອັດຕະໂນມັດ",
+  "nodes": [
+    {
+      "id": "webhook-approve",
+      "name": "ຮັບການ Approve ຈາກ App",
+      "type": "n8n-nodes-base.webhook",
+      "position": [200, 300],
+      "parameters": {
+        "path": "phanukngan/approve",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "check-content",
+      "name": "ດຶງ Content ທີ່ Approve",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [420, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/jobs/{{$json.body.job_id}}"
+      }
+    },
+    {
+      "id": "claude-qc",
+      "name": "Claude QC ກວດພາສາລາວ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [640, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 500, messages: [{ role: 'user', content: `ກວດ Caption ລາວຕໍ່ໄປນີ້ ກ່ອນໂພສ:\n\n\"${$json.caption}\"\n\nໃຫ້ກວດ:\n1. ຄຳສັບຜິດ\n2. ໄວຍາກອນ\n3. ຄວາມເໝາະສົມ\n4. Hashtag ຖືກຕ້ອງ\n\nຕອບໃນຮູບ JSON: { ok: true/false, issues: [...], corrected_caption: '...' }` }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "check-qc-result",
+      "name": "QC ຜ່ານຫຼືບໍ່?",
+      "type": "n8n-nodes-base.if",
+      "position": [860, 300],
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ JSON.parse($json.content[0].text).ok }}", "operation": "equal", "value2": "true" }]
+        }
+      }
+    },
+    {
+      "id": "use-corrected",
+      "name": "ໃຊ້ Caption ທີ່ແກ້ໄຂ",
+      "type": "n8n-nodes-base.code",
+      "position": [1080, 400],
+      "parameters": {
+        "jsCode": "const qcResult = JSON.parse($('Claude QC ກວດພາສາລາວ').first().json.content[0].text);\nconst job = $('ດຶງ Content ທີ່ Approve').first().json;\nreturn [{ json: { ...job, caption: qcResult.corrected_caption || job.caption, qc_issues: qcResult.issues } }];"
+      }
+    },
+    {
+      "id": "split-platforms",
+      "name": "ແຍກຕາມ Platform",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [1300, 300],
+      "parameters": { "batchSize": 1 }
+    },
+    {
+      "id": "route-platform",
+      "name": "ເລືອກ Platform",
+      "type": "n8n-nodes-base.switch",
+      "position": [1520, 300],
+      "parameters": {
+        "dataPropertyName": "platform",
+        "rules": {
+          "rules": [
+            { "value": "facebook", "output": 0 },
+            { "value": "tiktok",   "output": 1 },
+            { "value": "instagram","output": 2 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "post-facebook",
+      "name": "ໂພສ Facebook",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1740, 160],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/={{$env.FB_PAGE_ID}}/{{$json.content_type === 'video' ? 'videos' : 'photos'}}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ url: $json.content_url, message: $json.caption, access_token: $env.FB_PAGE_TOKEN, published: !$json.schedule_time, scheduled_publish_time: $json.schedule_time ? Math.floor(new Date($json.schedule_time).getTime()/1000) : undefined }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "post-tiktok",
+      "name": "ໂພສ TikTok",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1740, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.tiktokapis.com/v2/post/publish/video/init/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "Bearer ={{$env.TIKTOK_ACCESS_TOKEN}}" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ post_info: { title: $json.caption.substring(0,150), privacy_level: 'PUBLIC_TO_EVERYONE', disable_duet: false, disable_comment: false, disable_stitch: false }, source_info: { source: 'PULL_FROM_URL', video_url: $json.content_url, auto_add_music: true } }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "post-instagram",
+      "name": "ໂພສ Instagram",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1740, 440],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/={{$env.IG_ACCOUNT_ID}}/media",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ image_url: $json.content_url, caption: $json.caption, access_token: $env.FB_PAGE_TOKEN }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "collect-results",
+      "name": "ລວບລວມຜົນ",
+      "type": "n8n-nodes-base.merge",
+      "position": [1960, 300],
+      "parameters": { "mode": "combine", "combinationMode": "mergeByPosition" }
+    },
+    {
+      "id": "update-job-status",
+      "name": "ອັບເດດສະຖານະ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2180, 300],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/jobs/{{$('ດຶງ Content ທີ່ Approve').first().json.id}}/status",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "json", "value": "={{ JSON.stringify({ status: 'posted', posted_at: new Date().toISOString(), platforms_posted: $('ດຶງ Content ທີ່ Approve').first().json.platforms }) }}" }]
+        }
+      }
+    },
+    {
+      "id": "final-notify",
+      "name": "ແຈ້ງໂພສສຳເລັດ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2400, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "json", "value": "={{ JSON.stringify({ title: '✅ ໂພສສຳເລັດ!', body: `ໂພສ ${$('ດຶງ Content ທີ່ Approve').first().json.platforms.join(', ')} ສຳເລັດ — ກວດ Engagement ໃນ 1 ຊົ່ວໂມງ`, type: 'post_success' }) }}" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "ຮັບການ Approve ຈາກ App":  { "main": [[{ "node": "ດຶງ Content ທີ່ Approve" }]] },
+    "ດຶງ Content ທີ່ Approve":  { "main": [[{ "node": "Claude QC ກວດພາສາລາວ" }]] },
+    "Claude QC ກວດພາສາລາວ":    { "main": [[{ "node": "ກວດ QC ຜ່ານຫຼືບໍ່?" }]] },
+    "ກວດ QC ຜ່ານຫຼືບໍ່?":       { "main": [[{ "node": "ແຍກຕາມ Platform" }], [{ "node": "ໃຊ້ Caption ທີ່ແກ້ໄຂ" }]] },
+    "ໃຊ້ Caption ທີ່ແກ້ໄຂ":     { "main": [[{ "node": "ແຍກຕາມ Platform" }]] },
+    "ແຍກຕາມ Platform":          { "main": [[{ "node": "ເລືອກ Platform" }]] },
+    "ເລືອກ Platform":            { "main": [[{ "node": "ໂພສ Facebook" }], [{ "node": "ໂພສ TikTok" }], [{ "node": "ໂພສ Instagram" }]] },
+    "ໂພສ Facebook":              { "main": [[{ "node": "ລວບລວມຜົນ" }]] },
+    "ໂພສ TikTok":                { "main": [[{ "node": "ລວບລວມຜົນ" }]] },
+    "ໂພສ Instagram":             { "main": [[{ "node": "ລວບລວມຜົນ" }]] },
+    "ລວບລວມຜົນ":                 { "main": [[{ "node": "ອັບເດດສະຖານະ" }]] },
+    "ອັບເດດສະຖານະ":             { "main": [[{ "node": "ແຈ້ງໂພສສຳເລັດ" }]] }
+  },
+  "_readme": {
+    "workflow": "Auto Social Post",
+    "flow": "Approve → Claude QC ລາວ → FB + TikTok + IG ພ້ອມກັນ → ແຈ້ງສຳເລັດ",
+    "env_required": ["ANTHROPIC_API_KEY","FB_PAGE_ID","FB_PAGE_TOKEN","TIKTOK_ACCESS_TOKEN","IG_ACCOUNT_ID","PHANUKNGAN_API_URL"]
+  }
+}

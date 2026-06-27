@@ -1,0 +1,136 @@
+{
+  "name": "PHANUKNGAN — Morning Brain (06:00 Daily)",
+  "nodes": [
+    {
+      "id": "trigger-schedule",
+      "name": "ຕື່ນທຸກມື້ 06:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300],
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 6 * * *" }] }
+      }
+    },
+    {
+      "id": "get-jobs",
+      "name": "ດຶງວຽກ Backlog ທັງໝົດ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [460, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/jobs?status=pending",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      }
+    },
+    {
+      "id": "get-teams",
+      "name": "ດຶງສະຖານະທີມ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [460, 440],
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/teams/availability"
+      }
+    },
+    {
+      "id": "merge-data",
+      "name": "ລວມຂໍ້ມູນ",
+      "type": "n8n-nodes-base.merge",
+      "position": [680, 370],
+      "parameters": { "mode": "combine", "combinationMode": "mergeByPosition" }
+    },
+    {
+      "id": "claude-decide",
+      "name": "Claude AI ວິເຄາະ + ວາງແຜນ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 370],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 1500, messages: [{ role: 'user', content: `ທ່ານເປັນຜູ້ຈັດການທີມ PHANUKNGAN. ກວດວຽກຕໍ່ໄປນີ້ ແລ້ວ ວາງແຜນວ່າ ມື້ນີ້ຄວນເລີ່ມຈາກວຽກໃດ ຈ່າຍໃຫ້ທີມໃດ. ຕອບເປັນ JSON ຮູບແບບ: { plan: [ { job_id, team, priority, reason_lao } ] }\n\nວຽກທັງໝົດ: ${JSON.stringify($('ດຶງວຽກ Backlog ທັງໝົດ').all())}\nທີມທີ່ວ່າງ: ${JSON.stringify($('ດຶງສະຖານະທີມ').all())}` }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "parse-plan",
+      "name": "ແຍກ Plan ຈາກ Claude",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 370],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\nconst jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\nif (!jsonMatch) throw new Error('Claude ບໍ່ສ່ົງ JSON ຄືນ');\nconst plan = JSON.parse(jsonMatch[0]);\nreturn plan.plan.map(item => ({ json: item }));"
+      }
+    },
+    {
+      "id": "assign-jobs",
+      "name": "ມອບໝາຍວຽກໃຫ້ທີມ",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 370],
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/jobs/{{$json.job_id}}/assign",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "json", "value": "={{ JSON.stringify({ team: $json.team, priority: $json.priority }) }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "notify-app",
+      "name": "ແຈ້ງເຕືອນໃສ່ App",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1560, 370],
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.PHANUKNGAN_API_URL}}/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json",
+              "value": "={{ JSON.stringify({ title: 'ແຜນວຽກມື້ນີ້ພ້ອມແລ້ວ', body: `ທີມ ${$json.team} ຮັບວຽກ ${$json.job_id} — ລຳດັບ ${$json.priority}`, data: { job_id: $json.job_id, team: $json.team } }) }}"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "ຕື່ນທຸກມື້ 06:00":        { "main": [[{ "node": "ດຶງວຽກ Backlog ທັງໝົດ", "type": "main", "index": 0 }, { "node": "ດຶງສະຖານະທີມ", "type": "main", "index": 0 }]] },
+    "ດຶງວຽກ Backlog ທັງໝົດ":  { "main": [[{ "node": "ລວມຂໍ້ມູນ", "type": "main", "index": 0 }]] },
+    "ດຶງສະຖານະທີມ":            { "main": [[{ "node": "ລວມຂໍ້ມູນ", "type": "main", "index": 1 }]] },
+    "ລວມຂໍ້ມູນ":               { "main": [[{ "node": "Claude AI ວິເຄາະ + ວາງແຜນ", "type": "main", "index": 0 }]] },
+    "Claude AI ວິເຄາະ + ວາງແຜນ": { "main": [[{ "node": "ແຍກ Plan ຈາກ Claude", "type": "main", "index": 0 }]] },
+    "ແຍກ Plan ຈາກ Claude":     { "main": [[{ "node": "ມອບໝາຍວຽກໃຫ້ທີມ", "type": "main", "index": 0 }]] },
+    "ມອບໝາຍວຽກໃຫ້ທີມ":         { "main": [[{ "node": "ແຈ້ງເຕືອນໃສ່ App", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "_readme": {
+    "workflow": "Morning Brain",
+    "trigger": "ທຸກວັນ 06:00 ອັດຕະໂນມັດ",
+    "steps": [
+      "1. ດຶງວຽກ Pending ທັງໝົດຈາກ Database",
+      "2. ດຶງທີມທີ່ວ່າງ",
+      "3. ສ່ົງໃຫ້ Claude AI ວິເຄາະ + ຈັດລຳດັບຄວາມສຳຄັນ",
+      "4. ມອບໝາຍວຽກໃຫ້ທີມທີ່ເໝາະສົມ",
+      "5. Push Notification ໄປ App"
+    ],
+    "env_required": ["PHANUKNGAN_API_URL", "ANTHROPIC_API_KEY"]
+  }
+}

@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # n8n — AI Automation Brain
+  # ==========================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: phanukngan-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # ---- n8n Core ----
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678
+
+      # ---- Security ----
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=phanukngan
+      - N8N_BASIC_AUTH_PASSWORD=changeme123
+
+      # ---- Timezone ----
+      - GENERIC_TIMEZONE=Asia/Vientiane
+      - TZ=Asia/Vientiane
+
+      # ---- API Keys (ໃສ່ຄ່າຈິງ) ----
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MIDJOURNEY_API_KEY=${MIDJOURNEY_API_KEY}
+      - CANVA_API_KEY=${CANVA_API_KEY}
+      - CAPCUT_API_KEY=${CAPCUT_API_KEY}
+      - SHOTSTACK_API_KEY=${SHOTSTACK_API_KEY}
+      - FB_PAGE_ID=${FB_PAGE_ID}
+      - FB_PAGE_TOKEN=${FB_PAGE_TOKEN}
+      - TIKTOK_ACCESS_TOKEN=${TIKTOK_ACCESS_TOKEN}
+      - IG_ACCOUNT_ID=${IG_ACCOUNT_ID}
+
+      # ---- PHANUKNGAN App ----
+      - PHANUKNGAN_API_URL=${PHANUKNGAN_API_URL}
+      - BRAND_NAME=PHANUKNGAN
+      - CONTACT_PHONE=020-XXXX-XXXX
+
+      # ---- Database ----
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=n8npassword
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ==========================================
+  # Postgres — n8n Database
+  # ==========================================
+  postgres:
+    image: postgres:15
+    container_name: phanukngan-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=n8npassword
+      - POSTGRES_DB=n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  n8n_data:
+  postgres_data:
