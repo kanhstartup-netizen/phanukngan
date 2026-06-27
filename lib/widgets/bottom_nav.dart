@@ -26,7 +26,7 @@ class PhanuknganBottomNav extends StatelessWidget {
             children: [
               _NavItem(icon: Icons.home_rounded,     label: 'ຫຼັກ',      index: 0, current: currentIndex, onTap: onTap),
               _NavItem(icon: Icons.chat_rounded,     label: 'Chat',     index: 1, current: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.sparkles_rounded, label: 'ຜົນ',       index: 2, current: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.auto_awesome_rounded, label: 'ຜົນ',       index: 2, current: currentIndex, onTap: onTap),
               _NavItem(icon: Icons.people_rounded,   label: 'ທີມ',      index: 3, current: currentIndex, onTap: onTap),
             ],
           ),
