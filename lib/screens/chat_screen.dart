@@ -140,30 +140,25 @@ class _ChatScreenState extends State<ChatScreen> {
           'time': _now, 'isPost': false});
       });
     } else {
-      // ຄຳສັ່ງທົ່ວໄປ → ສົ່ງ n8n + ຕອບ hardcode
-      N8nService.instance.sendNewJob(
-        title: msg, type: _detectType(msg), command: msg);
-      setState(() {
-        _typing = false; _sending = false;
-        _msgs.add({'isMe': false, 'text': _reply(msg), 'time': _now, 'isPost': false});
-      });
+      // ຄຳສັ່ງທົ່ວໄປ → ສົ່ງ n8n + await ຄຳຕອບ Claude ຈິງ
+      try {
+        final reply = await N8nService.instance.chat(msg);
+        if (!mounted) return;
+        setState(() {
+          _typing = false; _sending = false;
+          _msgs.add({'isMe': false, 'text': reply, 'time': _now, 'isPost': false});
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _typing = false; _sending = false;
+          _msgs.add({'isMe': false,
+            'text': '❌ ເຊື່ອມ n8n ບໍ່ສຳເລັດ\nກວດ: n8n workflow "phanukngan-chat" ເປີດຢູ່ບໍ?',
+            'time': _now, 'isPost': false});
+        });
+      }
     }
     _scrollEnd();
-  }
-
-  String _reply(String t) {
-    if (t.contains('ຄລິບ')) return 'ຮັບຄຳສັ່ງແລ້ວ!\nVideo Editor 20 ຄົນ ພ້ອມ:\n• Subtitle ລາວ + Logo\n• Watermark + QC\nn8n Push Notify ເມື່ອສຳເລັດ.';
-    if (t.contains('ຮູບ'))  return 'ຮັບຄຳສັ່ງແລ້ວ!\nGraphic Design ພ້ອມ:\n• Watermark + Contact\n• Claude ຂຽນ Caption ລາວ\nອັບໂຫລດຮູບດິບໄດ້ເລີຍ!';
-    if (t.contains('Caption')) return 'Content Creator ຮັບແລ້ວ!\n• Caption ລາວ 100%\n• Hashtag ທີ່ Trend\n• QC ກວດ Spelling';
-    if (t.contains('Banner'))  return 'Marketing Team ຮັບແລ້ວ!\n• 1080×1080 Professional\n• 3 Version ໃຫ້ເລືອກ\nຄາດ 1-2 ຊົ່ວໂມງ.';
-    return 'ຮັບຄຳສັ່ງ "$t" ແລ້ວ!\nClaude AI ກຳລັງຈັດສັນທີມ...\nຈະ Push Notify ເມື່ອມີຄວາມຄືບໜ້າ.';
-  }
-
-  String _detectType(String t) {
-    if (t.contains('ຄລິບ')) return 'video';
-    if (t.contains('ຮູບ'))  return 'graphic';
-    if (t.contains('Caption')) return 'content';
-    return 'general';
   }
 
   void _scrollEnd() => Future.delayed(100.ms, () {
