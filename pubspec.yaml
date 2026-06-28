@@ -55,17 +55,13 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # ---- FONTS ----
-  fonts:
-    - family: NotoSansLao
-      fonts:
-        - asset: assets/fonts/NotoSansLao-Regular.ttf
-        - asset: assets/fonts/NotoSansLao-Bold.ttf
-          weight: 700
-
-  # ---- ASSETS ----
-  assets:
-    - assets/fonts/
-    - assets/images/
-    - assets/lottie/
-    - assets/icons/
+  # ໝາຍເຫດ: ໃຊ້ font ພາສາລາວຜ່ານ package google_fonts ແທນ (GoogleFonts.notoSansLaoTextTheme())
+  # ສະນັ້ນບໍ່ຕ້ອງປະກາດ font ໄຟລ໌ ຫລື folder assets ທີ່ບໍ່ມີຢູ່ຈິງ.
+  #
+  # ເມື່ອໃດທີ່ທ່ານ upload ໄຟລ໌ຮູບ/icon/lottie ເຂົ້າ repo ແລ້ວ
+  # ຈຶ່ງເປີດ comment ສ່ວນລຸ່ມນີ້ຄືນ (ຕ້ອງມີຢ່າງໜ້ອຍ 1 ໄຟລ໌ໃນແຕ່ລະ folder):
+  #
+  # assets:
+  #   - assets/images/
+  #   - assets/lottie/
+  #   - assets/icons/
