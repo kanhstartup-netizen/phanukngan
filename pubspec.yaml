@@ -4,62 +4,62 @@ publish_to: none
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
   # ---- UI & FONTS ----
-  google_fonts: ^6.1.0
-  flutter_svg: ^2.0.9
-  flutter_animate: ^4.3.0
+  google_fonts: ^6.2.1
+  flutter_svg: ^2.0.10+1
+  flutter_animate: ^4.5.0
   shimmer: ^3.0.0
-  cached_network_image: ^3.3.0
+  cached_network_image: ^3.4.1
 
   # ---- NAVIGATION ----
-  go_router: ^13.0.0
+  go_router: ^14.2.7
 
   # ---- STATE ----
-  flutter_riverpod: ^2.4.0
+  flutter_riverpod: ^2.5.1
 
   # ---- BACKEND ----
-  supabase_flutter: ^2.3.0
-  shared_preferences: ^2.2.2
-  flutter_secure_storage: ^9.0.0
+  supabase_flutter: ^2.6.0
+  shared_preferences: ^2.3.2
+  flutter_secure_storage: ^9.2.2
 
   # ---- UPLOAD ----
-  image_picker: ^1.0.7
-  file_picker: ^6.1.1
-  path_provider: ^2.1.2
-  permission_handler: ^11.3.0
+  image_picker: ^1.1.2
+  file_picker: ^8.1.2
+  path_provider: ^2.1.4
+  permission_handler: ^11.3.1
 
   # ---- n8n WEBHOOK ----
-  dio: ^5.4.0
+  dio: ^5.7.0
 
   # ---- NOTIFICATIONS ----
-  flutter_local_notifications: ^17.0.0
+  flutter_local_notifications: ^17.2.3
 
   # ---- SOCIAL ----
-  url_launcher: ^6.2.4
+  url_launcher: ^6.3.1
 
-  cupertino_icons: ^1.0.6
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true
 
-  # ໝາຍເຫດ: ໃຊ້ font ພາສາລາວຜ່ານ package google_fonts ແທນ (GoogleFonts.notoSansLaoTextTheme())
+  # ໝາຍເຫດ: ໃຊ້ font ພາສາລາວຜ່ານ package google_fonts (GoogleFonts.notoSansLaoTextTheme())
   # ສະນັ້ນບໍ່ຕ້ອງປະກາດ font ໄຟລ໌ ຫລື folder assets ທີ່ບໍ່ມີຢູ່ຈິງ.
   #
-  # ເມື່ອໃດທີ່ທ່ານ upload ໄຟລ໌ຮູບ/icon/lottie ເຂົ້າ repo ແລ້ວ
-  # ຈຶ່ງເປີດ comment ສ່ວນລຸ່ມນີ້ຄືນ (ຕ້ອງມີຢ່າງໜ້ອຍ 1 ໄຟລ໌ໃນແຕ່ລະ folder):
+  # ເມື່ອໃດທີ່ upload ໄຟລ໌ຮູບ/icon/lottie ເຂົ້າ repo ແລ້ວ ຈຶ່ງເປີດ comment ສ່ວນລຸ່ມຄືນ
+  # (ຕ້ອງມີຢ່າງໜ້ອຍ 1 ໄຟລ໌ໃນແຕ່ລະ folder):
   #
   # assets:
   #   - assets/images/
