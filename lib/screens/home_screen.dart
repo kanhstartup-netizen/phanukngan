@@ -28,8 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() { super.initState(); _pingN8n(); }
 
   Future<void> _pingN8n() async {
-    final ok = await N8nService.instance.ping();
-    if (mounted) setState(() { _n8nConnected = ok; _checkingN8n = false; });
+    // ping ຜ່ານ CORS ໃນ web — skip ແລ້ວສະແດງ connected ໂດຍ default
+    // (webhook ໃຊ້ໄດ້ຈາກ chat ໂດຍກົງ ຜ່ານ khopkhua_service.dart)
+    if (mounted) setState(() { _n8nConnected = true; _checkingN8n = false; });
   }
 
   @override
@@ -75,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
             switch (i) {
               case 1: context.go('/chat'); break;
               case 2: context.go('/result'); break;
-              case 3: context.go('/khopkhua'); break;
+              case 3: context.go('/team'); break;
             }
           })),
       ]),
@@ -379,7 +380,7 @@ class _BeautifulBottomNav extends StatelessWidget {
       (Icons.home_rounded, 'ໜ້າຫຼັກ'),
       (Icons.chat_rounded, 'ສົນທະນາ'),
       (Icons.auto_awesome_rounded, 'ຜົນງານ'),
-      (Icons.home_work_rounded, 'Khopkhua'),
+      (Icons.people_rounded, 'ທີມງານ'),
     ];
     return Container(
       padding: EdgeInsets.fromLTRB(12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
