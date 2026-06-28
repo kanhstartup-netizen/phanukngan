@@ -15,6 +15,7 @@ import 'screens/new_job_screen.dart';
 import 'screens/jobs/upload_screen.dart';
 import 'screens/jobs/job_progress_screen.dart';
 import 'screens/other_screens.dart';
+import 'screens/khopkhua_screen.dart';
 import 'services/notification_service.dart';
 
 // ==========================================
@@ -93,6 +94,7 @@ final _router = GoRouter(
         ResultScreen(jobId: s.extra as String? ?? '')),
     GoRoute(path: '/scheduler', builder: (_, __) => const SchedulerScreen()),
     GoRoute(path: '/team',      builder: (_, __) => const TeamScreen()),
+    GoRoute(path: '/khopkhua',  builder: (_, __) => const KhopkhuaScreen()),
   ],
 );
 
