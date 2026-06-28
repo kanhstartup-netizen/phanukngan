@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-final supabase = Supabase.instance.client;
+// ໃຊ້ getter ເພື່ອໃຫ້ປະເມີນຕອນເອີ້ນໃຊ້ (ຫລັງ Supabase.initialize ສຳເລັດ)
+// ບໍ່ໃຊ້ top-level variable ເພາະມັນ run ກ່ອນ init → crash ໃນ web
+SupabaseClient get supabase => Supabase.instance.client;
 
 // ==========================================
 // JOB MODEL
