@@ -28,7 +28,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Supabase init — ປ້ອງກັນ crash ຖ້າລົ້ມເຫລວ
-  // ໃນ web ໃຊ້ pkce flow ແລະ ບໍ່ໃຊ້ secure storage ທີ່ crash
+  // ໃນ web ໃຊ້ pkce flow
   try {
     await Supabase.initialize(
       url: _supabaseUrl,
