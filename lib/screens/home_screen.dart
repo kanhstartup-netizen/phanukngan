@@ -75,8 +75,9 @@ class _HomeScreenState extends State<HomeScreen> {
             setState(() => _tab = i);
             switch (i) {
               case 1: context.go('/chat'); break;
-              case 2: context.go('/result'); break;
-              case 3: context.go('/team'); break;
+              case 2: context.go('/khopkhua'); break;
+              case 3: context.go('/result'); break;
+              case 4: context.go('/team'); break;
             }
           })),
       ]),
@@ -181,12 +182,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickActions() {
+    // type/title ສຳລັບສົ່ງເຂົ້າ /upload flow
     final actions = [
-      (Icons.videocam_rounded, 'ຕັດຄລິບ', AppTheme.purple),
-      (Icons.photo_camera_rounded, 'ແຕ່ງຮູບ', AppTheme.primary),
-      (Icons.edit_rounded, 'ຂຽນໂພສ', AppTheme.success),
-      (Icons.campaign_rounded, 'Banner', AppTheme.warning),
-      (Icons.chat_rounded, 'AI Chat', AppTheme.accent),
+      (Icons.videocam_rounded, 'ຕັດຄລິບ', AppTheme.purple, 'video', 'ຕັດຄລິບວິດີໂອ'),
+      (Icons.photo_camera_rounded, 'ແຕ່ງຮູບ', AppTheme.primary, 'graphic', 'ແຕ່ງຮູບ + Watermark'),
+      (Icons.edit_rounded, 'ຂຽນໂພສ', AppTheme.success, 'content', 'ຂຽນ Caption + ໂພສ'),
+      (Icons.campaign_rounded, 'Banner', AppTheme.warning, 'graphic', 'ອອກແບບ Banner'),
+      (Icons.chat_rounded, 'AI Chat', AppTheme.accent, 'chat', 'AI Chat'),
     ];
     return SizedBox(
       height: 82,
@@ -194,11 +196,18 @@ class _HomeScreenState extends State<HomeScreen> {
         scrollDirection: Axis.horizontal, itemCount: actions.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
-          final (icon, label, color) = actions[i];
+          final (icon, label, color, type, title) = actions[i];
           return _QuickActionChip(
             icon: icon, label: label, color: color,
             delay: 550 + i * 60,
-            onTap: () => i == 4 ? context.go('/chat') : context.go('/new-job'));
+            onTap: () {
+              if (type == 'chat') { context.go('/chat'); return; }
+              context.go('/upload', extra: {
+                'jobId': DateTime.now().millisecondsSinceEpoch.toString(),
+                'jobType': type,
+                'jobTitle': title,
+              });
+            });
         }),
     );
   }
@@ -207,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
     label: 'ສ້າງວຽກໃໝ່ + ສົ່ງ n8n',
     icon: Icons.add_rounded,
     color: AppTheme.primary,
-    onTap: () => context.go('/chat'))
+    onTap: () => context.go('/new-job'))
   .animate(delay: 900.ms)
   .scale(begin: const Offset(0, 0), curve: Curves.elasticOut, duration: 700.ms)
   .fadeIn(duration: 400.ms);
@@ -379,6 +388,7 @@ class _BeautifulBottomNav extends StatelessWidget {
     final items = [
       (Icons.home_rounded, 'ໜ້າຫຼັກ'),
       (Icons.chat_rounded, 'ສົນທະນາ'),
+      (Icons.groups_rounded, 'ຄອບຄົວ'),
       (Icons.auto_awesome_rounded, 'ຜົນງານ'),
       (Icons.people_rounded, 'ທີມງານ'),
     ];
