@@ -75,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
             switch (i) {
               case 1: context.go('/chat'); break;
               case 2: context.go('/result'); break;
-              case 3: context.go('/team'); break;
+              case 3: context.go('/khopkhua'); break;
             }
           })),
       ]),
@@ -379,7 +379,7 @@ class _BeautifulBottomNav extends StatelessWidget {
       (Icons.home_rounded, 'ໜ້າຫຼັກ'),
       (Icons.chat_rounded, 'ສົນທະນາ'),
       (Icons.auto_awesome_rounded, 'ຜົນງານ'),
-      (Icons.people_rounded, 'ທີມງານ'),
+      (Icons.home_work_rounded, 'Khopkhua'),
     ];
     return Container(
       padding: EdgeInsets.fromLTRB(12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
