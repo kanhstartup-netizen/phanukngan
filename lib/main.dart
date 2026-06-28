@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -26,12 +27,28 @@ const kDemoMode        = false;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: _supabaseUrl,
-    anonKey: _supabaseAnonKey,
-  );
+  // Supabase init — ປ້ອງກັນ crash ຖ້າລົ້ມເຫລວ
+  // ໃນ web ໃຊ້ pkce flow ແລະ ບໍ່ໃຊ້ secure storage ທີ່ crash
+  try {
+    await Supabase.initialize(
+      url: _supabaseUrl,
+      anonKey: _supabaseAnonKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
+    );
+  } catch (e) {
+    debugPrint('Supabase init failed: $e');
+  }
 
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  // setPreferredOrientations ບໍ່ support web — ຂ້າມໄປຖ້າເປັນ web
+  if (!kIsWeb) {
+    try {
+      await SystemChrome.setPreferredOrientations(
+          [DeviceOrientation.portraitUp]);
+    } catch (_) {}
+  }
+
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
