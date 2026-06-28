@@ -66,10 +66,12 @@ class N8nService {
   N8nService._();
   static N8nService get instance => _instance ??= N8nService._();
 
-  // ✏️ ປ່ຽນ URL ນີ້ ເປັນ n8n Webhook URL ຂອງທ່ານ
-  // Railway n8n URL
-  static const String _baseUrl = 'https://n8n-production-f688.up.railway.app';
+  // Cloudflare Worker proxy — ຫລີກ CORS ໃນ Web
+  static const String _baseUrl = 'https://n8n-proxy.kanh-startup-602.workers.dev';
   static const String _webhookPath = '/webhook/khopkhua-post';
+
+  // Chat endpoint — Claude ຕອບໂດຍກົງ (ສ້າງ webhook ໃໝ່ໃນ n8n ຊື່ phanukngan-chat)
+  static const String _chatPath = '/webhook/phanukngan-chat';
 
   late final Dio _dio = Dio(BaseOptions(
     baseUrl: _baseUrl,
@@ -188,6 +190,39 @@ class N8nService {
     event: N8nEvent.requestReport,
     payload: {'period': period},
   );
+
+  /// Chat ໂດຍກົງ → Claude AI ຕອບ (ໃຊ້ /webhook/phanukngan-chat)
+  /// n8n workflow: Webhook → Claude AI → Respond to Webhook
+  /// Response format: { "reply": "ຄຳຕອບ..." }  ຫລື  { "message": "..." }
+  Future<String> chat(String userMessage) async {
+    try {
+      final res = await _dio.post(_chatPath, data: {
+        'message': userMessage,
+        'timestamp': DateTime.now().toIso8601String(),
+        'app': 'phanukngan',
+        'lang': 'lao',
+      });
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = res.data;
+        // ຮອງຮັບຫລາຍ format ທີ່ n8n ສົ່ງກັບ
+        if (data is Map) {
+          return (data['reply']
+              ?? data['message']
+              ?? data['output']
+              ?? data['text']
+              ?? data['response']
+              ?? data.toString()) as String;
+        }
+        if (data is String && data.isNotEmpty) return data;
+      }
+      return '❌ n8n ຕອບ code ${res.statusCode} — ກວດ workflow';
+    } on DioException catch (e) {
+      return '❌ ${_errorMsg(e)}';
+    } catch (e) {
+      return '❌ ຜິດພາດ: $e';
+    }
+  }
 
   /// ທົດສອບ Connection
   Future<bool> ping() async {
