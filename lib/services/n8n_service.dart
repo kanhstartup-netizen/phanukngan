@@ -67,8 +67,9 @@ class N8nService {
   static N8nService get instance => _instance ??= N8nService._();
 
   // ✏️ ປ່ຽນ URL ນີ້ ເປັນ n8n Webhook URL ຂອງທ່ານ
-  static const String _baseUrl = 'http://localhost:5678/webhook';
-  static const String _webhookPath = '/phanukngan';
+  // Railway n8n URL
+  static const String _baseUrl = 'https://n8n-production-f688.up.railway.app';
+  static const String _webhookPath = '/webhook/khopkhua-post';
 
   late final Dio _dio = Dio(BaseOptions(
     baseUrl: _baseUrl,
@@ -190,12 +191,21 @@ class N8nService {
 
   /// ທົດສອບ Connection
   Future<bool> ping() async {
-    final r = await send(
-      event: N8nEvent.teamAction,
-      payload: {'action': 'ping'},
-      retries: 0,
-    );
-    return r.success;
+    // ທົດສອບ webhook URL ໂດຍກົງ (GET request)
+    try {
+      final res = await Dio().get(
+        'https://n8n-production-f688.up.railway.app/webhook/khopkhua-post',
+        options: Options(
+          validateStatus: (s) => s != null && s < 500,
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
+      );
+      // 404 = webhook ຂຶ້ນທຽວ ແຕ່ GET ຖືກປະຕິເສດ (ຕ້ອງ POST) = connected ✅
+      return res.statusCode == 404 || res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 }
 
