@@ -6,8 +6,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class KhopkhuaService {
+  // ໃຊ້ Cloudflare Worker proxy ແທນ (ແກ້ CORS ໃນ web)
   static const _webhookUrl =
-      'https://n8n-production-f688.up.railway.app/webhook/khopkhua-post';
+      'https://n8n-proxy.kanh-startup-602.workers.dev';
 
   static final _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 30),
